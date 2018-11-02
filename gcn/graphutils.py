@@ -20,7 +20,7 @@ def load_other(other_sources, other_sinks, path="gcn/data/",append='fourroom',fo
     edges = np.loadtxt("{}{}_edges.txt".format(path,append), dtype=np.int32)
     graph_dict = dict(zip(vertices,range(len(vertices))))
     featplot=None
-
+#$asda
     # pdb.set_trace()
     nofeats = (file_features == -1).sum()
     if nofeats or force_nofeats: 
