@@ -37,7 +37,7 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
     force_feats=FLAGS.f
     force_nofeats=FLAGS.nf
 
-    # pdb.set_trace()
+    pdb.set_trace()
     np.random.seed(seed)
     tf.set_random_seed(seed)
 

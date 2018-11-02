@@ -168,7 +168,7 @@ for seed in seeds:
             critics[option].add(np.zeros((1)) )
             action_critics[option].add(np.zeros((1,4)) )
             option_policies[option].add(np.zeros((1,4)) )
-            options_dict[option][newobs] = len(critics[option].weights) -1
+            options_dict[option][newobs] = len(critics[option].weights) - 1
 
 
 
@@ -306,14 +306,7 @@ for seed in seeds:
 
 
 
-
-
-
-        
-        # if episode == FLAGS.nepisodes-1:
-        # if episode == FLAGS.ngraph -1:
         if done and not init_set:
-        # if 0:
 
             # pdb.set_trace()
             allobs = list(observations)
@@ -332,61 +325,7 @@ for seed in seeds:
             critic_map[critic_map == 0] = critic_vals
 
 
-            # #plot feats
-            # interpol = make_interpolater(min(critics[option].weights),max(critics[option].weights),0.,1.)
-            # xtra_feats =[]
-            # for w in critics[option].weights:
-            #     xtra_feats.append(interpol(w))
-            # feats_map = env.occupancy.flatten().astype(float)
-            # feats_vals = np.array(xtra_feats).copy()
-            # feats_map[feats_map == 1] = -.02
-            # feats_map[feats_map == 0] = feats_vals
-
-
-            # #Plot the path
-            # path = env.occupancy.flatten().astype(float)
-            # walls = np.where(env.occupancy.flatten()==1)[0]
-            # pdb.set_trace()
-            # print(walls)
-            # path[walls]= 0.1            
-            # path[path == 1] = .4
-            # path[allobs] = 0.4
-            # path[list(epoch_states)] = 0.7
-            # path[start] = 0.6
-            # path[list(epoch_states)[-1]] = 0.5
-            # path[full_grid_dict.get(env.goal)] = 0.75
-
-
-            # fig,ax = plt.subplots(1)
-            # ax.imshow(path.reshape(env.occupancy.shape),cmap=new_map)
-          
-            # ax.imshow(critic_map.reshape(env.occupancy.shape),cmap=new_map)
-            # plt.show()
-            # # ax[2].imshow(feats_map.reshape(env.occupancy.shape),cmap=new_map)
-            # # plt.show()
-            # epoch_states=set()
-
-            # # # Plot the Q functions
-            # # acts = ['up','down','left','right']
-            # # for i,act in zip(range(env.action_space.n),acts):
-                
-            # #     plan = env.occupancy.flatten().astype(float)
-            # #     plot_critic = action_critic.weights[:,0,i].copy()
-            # #     plot_critic[plot_critic == 0] = -0.01
-            # #     plan[plan == 0] = plot_critic
-            # #     plan[plan == 1] = -.02   
-            # #     ax[i+2].imshow(plan.reshape(env.occupancy.shape),cmap=new_map)
-            # plt.xticks([])
-            # plt.yticks([])  
-
-            # directory = "presentation/"
-            # if not os.path.exists(directory):
-            #     os.makedirs(directory)
-            # plt.savefig("{}epoch{}_seed{}.png".format(directory,episode,seed))
-            # plt.close()
-
-
-            # pdb.set_trace()
+            
             option=0
             interpol = make_interpolater(min(critics[option].weights),max(critics[option].weights),0.,1.)
             critic_features =[]
@@ -402,14 +341,6 @@ for seed in seeds:
 
             row,col = env.occupancy.shape
 
-            # pdb.set_trace()
-            # sources = [start]
-            # sources = map(env.state_dict.get,env.init_states)
-
-            # sources = [sources[0] for _ in range(5) ]
-            # for counter,source in enumerate(sources):
-            #     if source not in allobs:
-            #         continue
 
             source = sources[0]
             sink = full_grid_dict.get(env.goal)
@@ -424,7 +355,7 @@ for seed in seeds:
                 for state,feat in zip(allobs,allfeats[allobs]):
                     f.write("{} {}\n".format(state,feat))
             last_obs = allobs
-
+            pdb.set_trace()
 
 
 
@@ -438,14 +369,7 @@ for seed in seeds:
                 # sess = tf.Session()
                 # init_set,goals,_ = get_graph(seed,sess,sources[:3],sinks,1)
 
-                # pdb.set_trace()
-                
-                # def replace(x):
-                #     if x < .3:
-                #         return 0.
-                #     else:
-                #         return x
-                # V_weights = map(replace,V_weights)
+
 
                 allstates = init_set + goals
                 allstates.sort()
@@ -465,7 +389,7 @@ for seed in seeds:
             # break
 
         totalsteps.append(cumsteps)
-    # pdb.set_trace()
+
 
 
           

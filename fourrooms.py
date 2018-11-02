@@ -225,7 +225,7 @@ wwwwwwwwwwwww
         state = self.tostate[self.currentcell]
         done = state == self.goal
 
-
+        reward=0.
         if state == self.goal:
             reward = 1.
         elif state in self.more_rewards:
