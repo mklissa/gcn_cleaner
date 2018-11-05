@@ -22,30 +22,30 @@ wwwwwwwwwwwww
 """
 
 
-        layout = """\
-wwwwwwwwwwwwwwwwwwwwww
-wsssssssssw          w
-wsssssssssw          w
-wsssssssssw          w
-wsssssssssw   n      w
-wsssssssss           w
-wsssssssss           w
-wsssssssssw          w
-wsssssssssw          w
-wsssssssssw          w
-wwwwnnwwwwwwwww  wwwww
-w         w          w
-w         w          w
-w         w          w
-w         w          w
-w         w          w
-w              g     w
-w                    w
-w         w          w
-w         w          w
-w         w          w
-wwwwwwwwwwwwwwwwwwwwww
-"""
+#         layout = """\
+# wwwwwwwwwwwwwwwwwwwwww
+# wsssssssssw          w
+# wsssssssssw          w
+# wsssssssssw          w
+# wsssssssssw   n      w
+# wsssssssss           w
+# wsssssssss           w
+# wsssssssssw          w
+# wsssssssssw          w
+# wsssssssssw          w
+# wwwwnnwwwwwwwww  wwwww
+# w         w          w
+# w         w          w
+# w         w          w
+# w         w          w
+# w         w          w
+# w              g     w
+# w                    w
+# w         w          w
+# w         w          w
+# w         w          w
+# wwwwwwwwwwwwwwwwwwwwww
+# """
 
 
 #         layout = """\

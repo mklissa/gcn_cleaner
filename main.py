@@ -237,7 +237,7 @@ for seed in seeds:
             fig,ax = plt.subplots(1,1)
             ax.imshow(path)
             # ax[1].imshow(path)
-            directory = "path_{}_{}/".format(FLAGS.app,row*col)
+            directory = "path_gen{}_{}/".format(FLAGS.gen,row*col)
             if not os.path.exists(directory):
                 os.makedirs(directory)
             plt.savefig("{}seed{}_{}.png".format(directory,seed,episode))
