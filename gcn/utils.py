@@ -3,6 +3,7 @@ from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys, matplotlib.pyplot as plt, pdb
 
 def load_other(path='gcn/data/', append='', force_feats=False, force_nofeats=False):
+    
     info = np.loadtxt(('{}{}_info.txt').format(path, append))
     row, col = map(int, (info[(0, 0)], info[(0, 1)]))
     source, sink = map(int, (info[(1, 0)], info[(1, 1)]))
@@ -182,3 +183,26 @@ def encode_onehot(labels):
     classes_dict = {c:np.identity(len(classes))[i, :] for i, c in enumerate(classes)}
     labels_onehot = np.array(list(map(classes_dict.get, labels)), dtype=np.int32)
     return labels_onehot
+
+
+
+    
+
+
+
+def make_interpolater(left_min, left_max, right_min, right_max): 
+    if left_min == left_max:
+        return lambda x:x
+    # Figure out how 'wide' each range is  
+    leftSpan = left_max - left_min  
+    rightSpan = right_max - right_min  
+
+    # Compute the scale factor between left and right values 
+    scaleFactor = float(rightSpan) / float(leftSpan) 
+
+    # create interpolation function using pre-calculated scaleFactor
+    def interp_fn(value):
+        return right_min + (value-left_min)*scaleFactor
+
+    return interp_fn
+        

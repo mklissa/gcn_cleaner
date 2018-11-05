@@ -130,12 +130,12 @@ class GCN(Model):
         self.entropy =  - tf.reduce_sum(all_probs_outs * tf.log(all_probs_outs))
         # self.loss += -1e-2*self.entropy
 
-        first = tf.matmul(tf.transpose(tf.expand_dims(outs,1)),self.laplacian)
-        total = tf.matmul(first,tf.expand_dims(outs,1))
-        self.midloss = tf.reduce_sum(total) / len(self.edges)
+        # first = tf.matmul(tf.transpose(tf.expand_dims(outs,1)),self.laplacian)
+        # total = tf.matmul(first,tf.expand_dims(outs,1))
+        # self.midloss = tf.reduce_sum(total) / len(self.edges)
         # pdb.set_trace()
         # self.loss += 1*10**(-int(FLAGS.fig))*self.midloss
-        self.loss += 1e-0*self.midloss
+        # self.loss += 1e-0*self.midloss
 
 
 
@@ -161,14 +161,14 @@ class GCN(Model):
                                             sparse_inputs=True,
                                             logging=self.logging))
 
-        # self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
-        #                                     output_dim=FLAGS.hidden2,
-        #                                     placeholders=self.placeholders,
-        #                                     act=act,
-        #                                     dropout=True,
-        #                                     # sparse_inputs=True,
-        #                                     logging=self.logging))
-        # FLAGS.hidden1= FLAGS.hidden2
+        self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
+                                            output_dim=FLAGS.hidden2,
+                                            placeholders=self.placeholders,
+                                            act=act,
+                                            dropout=True,
+                                            # sparse_inputs=True,
+                                            logging=self.logging))
+        FLAGS.hidden1= FLAGS.hidden2
 
 
         # self.layers.append(GraphConvolution(input_dim=FLAGS.hidden2,

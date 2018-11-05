@@ -22,51 +22,50 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 lastoutputs= None
-def get_graph(seed,sess,other_sources,other_sinks,itera):
+
+def get_graph(sess, seed, edges, vertices, adj, labels, source, sink, reward_states, env, other_sources=[],other_sinks=[]):
+
+# def get_graph(seed,sess,reward_states,env,itera):
+
+    row,col = env.grid.shape
+
+    eachepoch = FLAGS.eachepoch # Plot the resulting VF after each epoch or not
 
 
-    # other_sources= []
-    if len(other_sinks) == 1:
-        other_sinks=[]
+    features = np.eye(len(vertices), dtype=np.int32) # One-hot encoding for the features (i.e. feature-less)
+    features = sparse_to_tuple(sp.lil_matrix(features))
 
-    eachepoch = FLAGS.eachepoch
-    # eachepoch = 1  # Plot the resulting VF after each epoch or not
-
-
-    # pdb.set_trace()
-    force_feats=FLAGS.f
-    force_nofeats=FLAGS.nf
-
-    pdb.set_trace()
     np.random.seed(seed)
     tf.set_random_seed(seed)
 
 
 
-    features, featplot, adj, labels, vertices, edges, row, col, source, sink, other_sources, other_sinks, grid_dict = load_other(other_sources,other_sinks,append=FLAGS.app,force_feats=force_feats,force_nofeats=force_nofeats)
-    y_train, y_val, train_mask, val_mask, my_train = get_splits(labels, source, sink, other_sources, other_sinks)
+    # features, adj, labels,\
+    #  vertices, edges, row, col, source,\
+    #   sink, other_sinks, obs2grid, grid2obs = load_data(append=FLAGS.app)
+
+    # reward_states =  map(grid2obs.get,reward_states)
+
+    y_train, y_val,\
+     train_mask, val_mask = get_splits(labels, source, sink, reward_states)
 
 
     if sink is None:
         print("Sink not there, skipping this seed.")
         return None,None
 
-    G=nx.Graph()
-    G.add_nodes_from(range(len(vertices)))
-    G.add_edges_from(edges,capacity=1)
-    
 
 
     # Compute some baselines
-    start = time.time()
-    sc = SpectralClustering(2, affinity='precomputed', 
-                            n_init=5, eigen_solver='arpack', assign_labels='discretize')
-    sc.fit(adj.toarray())
-    print('Time for spectral clustering {}'.format(time.time()-start))
+    # start = time.time()
+    # sc = SpectralClustering(2, affinity='precomputed', 
+    #                         n_init=5, eigen_solver='arpack', assign_labels='discretize')
+    # sc.fit(adj.toarray())
+    # print('Time for spectral clustering {}'.format(time.time()-start))
 
-    start = time.time()
-    cut = nx.minimum_cut(G,source,sink)
-    print("Total time for mincut {}".format(time.time()-start))
+    # start = time.time()
+    # cut = nx.minimum_cut(G,source,sink)
+    # print("Total time for mincut {}".format(time.time()-start))
 
 
 
@@ -108,8 +107,9 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
 
 
 
-    # pdb.set_trace()
-    model = model_func(placeholders,edges,laplacian, input_dim=features[2][1], logging=True,FLAGS=FLAGS)
+
+
+    model = model_func(placeholders,edges,laplacian, input_dim=features[2][1], logging=True, FLAGS=FLAGS)
     
     sess.run(tf.global_variables_initializer())
 
@@ -126,9 +126,11 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
         if eachepoch:
             outputs = sess.run([tf.nn.softmax(model.outputs)], feed_dict=feed_dict)[0]
 
-            X = np.ones((row*col)) *.5
+            X = np.ones((row*col)) * -0.11
             Xround = np.ones((row*col)) *.5
             X[vertices] = outputs[:,1]
+            walls = np.where(env.grid.flatten()==1)
+            X[walls]=-0.1
             Xround[vertices] = np.round(X[vertices])
             if (Xround[vertices] == 0.).all():
                 X[0] = Xround[0] = 1.
@@ -137,58 +139,58 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
 
 
 
-            path = np.ones((row*col))*0.25
-            path[vertices] = .5
-            path_sources = map(grid_dict.get, other_sources)
-            path[path_sources] = 0.
-            path_sinks = map(grid_dict.get, other_sinks)
-            path[path_sinks] = 1.
-            path=path.reshape(row,col)
+            # path = np.ones((row*col))*0.25
+            # path[vertices] = .5
+            # path_sources = map(obs2grid.get, other_sources)
+            # path[path_sources] = 0.
+            # path_sinks = map(obs2grid.get, other_sinks)
+            # path[path_sinks] = 1.
+            # path=path.reshape(row,col)
 
 
-            A=map(grid_dict.get,cut[1][0])
-            B=map(grid_dict.get,cut[1][1])
-            view_cut=np.ones((row*col))*0.5
-            view_cut[A] = 0
-            view_cut[B] = 1
-            view_cut=view_cut.reshape(row,col)
+            # A=map(obs2grid.get,cut[1][0])
+            # B=map(obs2grid.get,cut[1][1])
+            # view_cut=np.ones((row*col))*0.5
+            # view_cut[A] = 0
+            # view_cut[B] = 1
+            # view_cut=view_cut.reshape(row,col)
 
 
             # pdb.set_trace()
 
-            A=map(grid_dict.get,np.argwhere(sc.labels_ ==1).flatten() ) 
-            B=map(grid_dict.get,np.argwhere(sc.labels_ ==0).flatten() )
+            # A=map(obs2grid.get,np.argwhere(sc.labels_ ==1).flatten() ) 
+            # B=map(obs2grid.get,np.argwhere(sc.labels_ ==0).flatten() )
 
-            n_cut=np.ones((row*col))*0.5
-            n_cut[A] = 0
-            n_cut[B] = 1
-            n_cut=n_cut.reshape(row,col)
+            # n_cut=np.ones((row*col))*0.5
+            # n_cut[A] = 0
+            # n_cut[B] = 1
+            # n_cut=n_cut.reshape(row,col)
             # pdb.set_trace()
 
-            if featplot is not None:
-                fig, ax = plt.subplots(6,1)
-                ax[0].imshow(path, interpolation='nearest')
-                ax[1].imshow(featplot.reshape(row,col), interpolation='nearest')
-                ax[2].imshow(Xround, interpolation='nearest')
-                ax[3].imshow(X, interpolation='nearest')
-                ax[4].imshow(view_cut, interpolation='nearest')
-                ax[5].imshow(n_cut, interpolation='nearest')
+            # if featplot is not None:
+            #     fig, ax = plt.subplots(6,1)
+            #     ax[0].imshow(path, interpolation='nearest')
+            #     ax[1].imshow(featplot.reshape(row,col), interpolation='nearest')
+            #     ax[2].imshow(Xround, interpolation='nearest')
+            #     ax[3].imshow(X, interpolation='nearest')
+            #     ax[4].imshow(view_cut, interpolation='nearest')
+            #     ax[5].imshow(n_cut, interpolation='nearest')
                 
-            else:
-                mask_map = np.ones((row*col)) * -0.11
-                mask_map[vertices] = my_train
-                mask_map=mask_map.reshape(row,col)
+            # else:
+            mask_map = np.ones((row*col)) * -0.11
+            mask_map[vertices] = y_train[:,1]
+            mask_map=mask_map.reshape(row,col)
 
-                # fig, ax = plt.subplots(5,1)
-                # ax[0].imshow(path, interpolation='nearest')
-                # ax[1].imshow(Xround, interpolation='nearest')
-                # ax[2].imshow(X, interpolation='nearest')
-                # ax[3].imshow(view_cut, interpolation='nearest')
-                # ax[4].imshow(n_cut, interpolation='nearest')
-                fig, ax = plt.subplots(2,1)
-                # ax[0].imshow(path, interpolation='nearest')
-                ax[0].imshow(X, interpolation='nearest')   
-                ax[1].imshow(mask_map, interpolation='nearest',cmap=new_map)                             
+            # fig, ax = plt.subplots(5,1)
+            # ax[0].imshow(path, interpolation='nearest')
+            # ax[1].imshow(Xround, interpolation='nearest')
+            # ax[2].imshow(X, interpolation='nearest')
+            # ax[3].imshow(view_cut, interpolation='nearest')
+            # ax[4].imshow(n_cut, interpolation='nearest')
+            fig, ax = plt.subplots(2,1)
+            # ax[0].imshow(path, interpolation='nearest')
+            ax[0].imshow(X, interpolation='nearest')   
+            ax[1].imshow(mask_map, interpolation='nearest',cmap=new_map)                             
 
 
 
@@ -196,14 +198,11 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
             # plt.close()
 
 
-            # directory = "{}_{}/".format(FLAGS.app,row*col)
-            # if not os.path.exists(directory):
-            #     os.makedirs(directory)
-            # # pdb.set_trace()
-            # # if FLAGS.fig:
-            # myfig = '_'+FLAGS.fig + "_{}".format(epoch)
-            # plt.savefig("{}seed{}{}.png".format(directory,seed,myfig))
-            # plt.close()
+            directory = "diff_{}_{}/".format(FLAGS.app,row*col)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            plt.savefig("{}seed{}_{}.png".format(directory,seed,epoch))
+            plt.close();plt.clf()
 
 
 
@@ -212,12 +211,10 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
         t = time.time()
         # pdb.set_trace()
         feed_dict = construct_feed_dict(adj, features, support, y_train, train_mask, placeholders)
-        # feed_dict.update({placeholders['learning_rate']: FLAGS.learning_rate  * .1 **(epoch/(FLAGS.epochs/2)) })        
-        # feed_dict.update({placeholders['learning_rate']: np.max(FLAGS.learning_rate - FLAGS.learning_rate * epoch/FLAGS.epochs,0.)})
         feed_dict.update({placeholders['learning_rate']: FLAGS.learning_rate})
-        # pdb.set_trace()
         outs = sess.run([model.opt_op, model.loss, model.accuracy,model.learning_rate], feed_dict=feed_dict)
-        # print(outs[-1])
+
+
 
     print("Total time for gcn {}".format(time.time()-start))
     print("Optimization Finished!")
@@ -225,100 +222,34 @@ def get_graph(seed,sess,other_sources,other_sinks,itera):
 
 
 
-    # pdb.set_trace()
+
+
     if not eachepoch:
 
         outputs = sess.run([tf.nn.softmax(model.outputs)], feed_dict=feed_dict)[0]
 
-        layout = """\
-wwwwwwwwwwwww
-wsssssw     w
-wsssssw     w
-wsssss      w
-wsssssw     w
-wsssssw     w
-ww wwww     w
-w     www www
-w     w     w
-w     w     w
-w        g  w
-w     w     w
-wwwwwwwwwwwww
-"""
-        occupancy = np.array([list(map(lambda c: 1 if c=='w' else 0, line)) for line in layout.splitlines()])
 
 
         X = np.ones((row*col)) * -0.11
         Xround = np.ones((row*col)) *.5
         X[vertices] = outputs[:,1]
-        walls = np.where(occupancy.flatten()==1)
+        walls = np.where(env.grid.flatten()==1)
         X[walls]=-0.1
-        # pdb.set_trace()
         Xround[vertices] = np.round(X[vertices])
-        # print(np.argwhere(Xround[vertices] == 1))
         if (Xround[vertices] == 0.).all():
             X[0] = Xround[0] = 1.
         X=X.reshape(row,col)
         Xround = Xround.reshape(row,col)
 
-        
-        # path = np.ones((row*col))*0.25
-        # path[vertices] = .5
-        # path_sources = map(grid_dict.get, other_sources)
-        # path[path_sources] = 0.
-        # path_sinks = map(grid_dict.get, other_sinks)
-        # path[path_sinks] = 1.
-        # path=path.reshape(row,col)
 
-        
-
-
-        # A=map(grid_dict.get,cut[1][0])
-        # B=map(grid_dict.get,cut[1][1])
-        # view_cut=np.ones((row*col))*0.5
-        # view_cut[A] = 0
-        # view_cut[B] = 1
-        # view_cut=view_cut.reshape(row,col)
-
-
-        # pdb.set_trace()
-
-        # A=map(grid_dict.get,np.argwhere(sc.labels_ ==1).flatten() ) 
-        # B=map(grid_dict.get,np.argwhere(sc.labels_ ==0).flatten() )
-
-        # n_cut=np.ones((row*col))*0.5
-        # n_cut[A] = 0
-        # n_cut[B] = 1
-        # n_cut=n_cut.reshape(row,col)
-        # pdb.set_trace()
-
-        # if featplot is not None:
-        #     fig, ax = plt.subplots(6,1)
-        #     ax[0].imshow(path, interpolation='nearest')
-        #     ax[1].imshow(n_cut, interpolation='nearest')            
-        #     ax[2].imshow(featplot.reshape(row,col), interpolation='nearest')
-        #     ax[3].imshow(Xround, interpolation='nearest')
-        #     ax[4].imshow(X, interpolation='nearest')
-        #     ax[5].imshow(view_cut, interpolation='nearest')
-
-            
-        # else:
-        #     fig, ax = plt.subplots(5,1)
-        #     ax[0].imshow(path, interpolation='nearest')
-        #     ax[1].imshow(Xround, interpolation='nearest')
-        #     ax[2].imshow(X, interpolation='nearest')
-        #     ax[3].imshow(n_cut, interpolation='nearest')            
-        #     ax[4].imshow(view_cut, interpolation='nearest')
-
-        # import pdb;pdb.set_trace()
         mask_map = np.ones((row*col)) * -0.11
-        mask_map[vertices] = my_train
+        mask_map[vertices] = y_train[:,1]
         mask_map=mask_map.reshape(row,col)
 
 
-        fig, ax = plt.subplots(2)      
-        ax[0].imshow(X, interpolation='nearest',cmap=new_map)
-        ax[1].imshow(mask_map, interpolation='nearest',cmap=new_map)
+        # fig, ax = plt.subplots(2)      
+        # ax[0].imshow(X, interpolation='nearest',cmap=new_map)
+        # ax[1].imshow(mask_map, interpolation='nearest',cmap=new_map)
         # plt.show()
         # plt.close()
         # sys.exit()
@@ -343,40 +274,25 @@ wwwwwwwwwwwww
 
 
 
-
-    initiation_set = np.argwhere(Xround.flatten()[vertices] == 0)
+    # pdb.set_trace()
+    initiation_set = list(np.argwhere(Xround.flatten()[vertices] == 0))
     goals = np.argwhere(Xround.flatten()[vertices] == 1)
 
-    # if grid_dict.get(source) in A:
-    #     initiation_set = A
-    #     goals = B
-    # else:
-    #     initiation_set = B
-    #     goals = A
-    # V_weights = np.zeros_like(X.flatten()[vertices])
 
 
-
-    if len(initiation_set) > 1:
-        initiation_set = map(grid_dict.get,initiation_set.squeeze())
-    if len(goals) > 1:
-        goals = map(grid_dict.get,goals.squeeze())
-    V_weights = X.flatten()[vertices] 
+    # if len(initiation_set) > 1:
+    #     initiation_set = map(obs2grid.get,initiation_set.squeeze())
+    # if len(goals) > 1:
+    #     goals = map(obs2grid.get,goals.squeeze())
+    V_weights = outputs[:,1]
 
     # pdb.set_trace()
 
-    sinks = list(np.argsort(X.flatten())[::-1])
-    sinks = [sink for sink in sinks if sink in goals]
+    # sinks = list(np.argsort(X.flatten())[::-1])
+    # sinks = [sink for sink in sinks if sink in goals]
 
     # pdb.set_trace()
 
     tf.reset_default_graph()
-    return initiation_set, goals, sinks[:5], V_weights
+    return initiation_set, V_weights
 
-
-
-
-
-
-# get_graph([132])
-# get_graph(range(130,135))

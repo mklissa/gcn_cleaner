@@ -14,38 +14,38 @@ wsssssw     w
 wsssssw     w
 ww wwww     w
 w     www www
+w    nw     w
 w     w     w
-w r   w     w
 w        g  w
 w     w     w
 wwwwwwwwwwwww
 """
 
 
-#         layout = """\
-# wwwwwwwwwwwwwwwwwwwwww
-# wsssssssssw          w
-# wsssssssssw          w
-# wsssssssssw          w
-# wsssssssssw          w
-# wsssssssss           w
-# wsssssssss           w
-# wsssssssssw          w
-# wsssssssssw          w
-# wsssssssssw          w
-# wwww  wwwwwwwww  wwwww
-# w         w          w
-# w         w          w
-# w         w          w
-# w         w          w
-# w         w          w
-# w              g     w
-# w                    w
-# w         w          w
-# w         w          w
-# w         w          w
-# wwwwwwwwwwwwwwwwwwwwww
-# """
+        layout = """\
+wwwwwwwwwwwwwwwwwwwwww
+wsssssssssw          w
+wsssssssssw          w
+wsssssssssw          w
+wsssssssssw   n      w
+wsssssssss           w
+wsssssssss           w
+wsssssssssw          w
+wsssssssssw          w
+wsssssssssw          w
+wwwwnnwwwwwwwww  wwwww
+w         w          w
+w         w          w
+w         w          w
+w         w          w
+w         w          w
+w              g     w
+w                    w
+w         w          w
+w         w          w
+w         w          w
+wwwwwwwwwwwwwwwwwwwwww
+"""
 
 
 #         layout = """\
@@ -75,7 +75,7 @@ wwwwwwwwwwwww
 # w                                          w
 # w                                          w
 # w                    w                     w
-# w                    w                     w
+# w         r          w                     w
 # w                    w                     w
 # wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 # """
@@ -150,24 +150,24 @@ wwwwwwwwwwwww
 # """
 
 
-        self.occupancy = np.array([list(map(lambda c: 1 if c=='w' else 0, line)) for line in layout.splitlines()])
-
+        self.grid = np.array([list(map(lambda c: 1 if c=='w' else 0, line)) for line in layout.splitlines()])
+        self.possible_states = np.argwhere((1. - self.grid).flatten() == 1)
 
         # From any state the agent can perform one of four actions, up, down, left or right
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Discrete(np.sum(self.occupancy == 0))
+        self.observation_space = spaces.Discrete(np.sum(self.grid == 0))
 
         self.directions = [np.array((-1,0)), np.array((1,0)), np.array((0,-1)), np.array((0,1))]
         self.rng = np.random.RandomState(1234)
 
 
-        # pdb.set_trace()
+        
 
         self.tostate = {}
         statenum = 0
         for i in range(layout.count('\n')):
             for j in range(len(layout.splitlines()[0])):
-                if self.occupancy[i, j] == 0:
+                if self.grid[i, j] == 0:
                     self.tostate[(i,j)] = statenum
                     statenum +=  1
         self.tocell = {v:k for k,v in self.tostate.items()}
@@ -176,37 +176,55 @@ wwwwwwwwwwwww
 
         goal =np.array([list(map(lambda c: 1 if c=='g' else 0, line)) for line in layout.splitlines()]).flatten()
 
-        more_rewards =np.array([list(map(lambda c: 1 if c=='r' else 0, line)) for line in layout.splitlines()]).flatten()
         
+        reward_labels = {'r':0.5,'n':-1.}
+        more_rewards_states=[]
+        more_rewards_labels=[]
+        for line in layout.splitlines():
+            more_rewards_states += list(map(lambda c: 1 if c in reward_labels.keys() else 0, line))
+            for c in line:
+                if c in reward_labels.keys():
+                    more_rewards_labels += c
+
+
+
 
         init_states = np.array([list(map(lambda c: 1 if c=='s' else 0, line)) for line in layout.splitlines()]).flatten()
-        grid_dict = dict(zip(np.argwhere(self.occupancy.flatten()==0).squeeze(),
+
+        self.grid2obs = grid2obs = dict(zip(np.argwhere(self.grid.flatten()==0).squeeze(),
                                                 range(self.observation_space.n) ))
 
         # pdb.set_trace()
-        self.init_states = map(grid_dict.get,np.argwhere(init_states == 1).flatten())
-        self.goal = map(grid_dict.get,np.argwhere(goal == 1).flatten())[0]
-        self.more_rewards = map(grid_dict.get,np.argwhere(more_rewards == 1).flatten())
+        self.init_states = map(grid2obs.get,np.argwhere(init_states == 1).flatten())
+        self.goal = map(grid2obs.get,np.argwhere(goal == 1).flatten())[0]
+
+
+        self.more_rewards_states = map(grid2obs.get,np.argwhere(np.array(more_rewards_states) == 1).flatten())
+        self.more_rewards = dict(zip(self.more_rewards_states,list(map(reward_labels.get,more_rewards_labels))))
+
+        self.original_rewards = self.more_rewards.copy()
+
+        self.obs2grid = {v:k for k,v in grid2obs.items()}
         
 
-        self.state_dict = {v:k for k,v in grid_dict.items()}
-        
-        # self.init_states = list(range(self.observation_space.n))
-        # self.init_states.remove(self.goal)
 
     def empty_around(self, cell):
         avail = []
         for action in range(self.action_space.n):
             nextcell = tuple(cell + self.directions[action])
-            if not self.occupancy[nextcell]:
+            if not self.grid[nextcell]:
                 avail.append(nextcell)
         return avail
 
     def reset(self):
+
+        # reset the rewards
+        for key in self.more_rewards.keys():
+            self.more_rewards[key] = self.original_rewards[key]
+
         state = self.rng.choice(self.init_states)
         self.currentcell = self.tocell[state]
-        # pdb.set_trace()
-        state =self.state_dict.get(state)
+        state = self.obs2grid.get(state)
         return state
 
     def step(self, action):
@@ -219,7 +237,7 @@ wwwwwwwwwwwww
         else:
             nextcell = tuple(self.currentcell + self.directions[action])
 
-        if not self.occupancy[nextcell]:
+        if not self.grid[nextcell]:
             self.currentcell = nextcell
 
         state = self.tostate[self.currentcell]
@@ -228,9 +246,10 @@ wwwwwwwwwwwww
         reward=0.
         if state == self.goal:
             reward = 1.
-        elif state in self.more_rewards:
-            reward = 0.5
+        elif state in self.more_rewards_states:
+            reward = self.more_rewards.get(state)
+            self.more_rewards[state] = 0.  # You can only catch the reward once per episode
 
 
-        state = self.state_dict.get(state)
+        state = self.obs2grid.get(state)
         return state, reward, done, None

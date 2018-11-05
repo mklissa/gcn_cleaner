@@ -9,7 +9,7 @@ import pdb
 
 
 
-def load_other(other_sources, other_sinks, path="gcn/data/",append='fourroom',force_feats=False, force_nofeats=False):
+def load_data(path="gcn/data/",append='fourroom'):
 
     
     info = np.loadtxt("{}{}_info.txt".format(path,append))
@@ -18,66 +18,26 @@ def load_other(other_sources, other_sinks, path="gcn/data/",append='fourroom',fo
     size = row*col
     vertices,file_features = map(int,info[2:,0]),info[2:,1]
     edges = np.loadtxt("{}{}_edges.txt".format(path,append), dtype=np.int32)
-    graph_dict = dict(zip(vertices,range(len(vertices))))
-    featplot=None
-#$asda
+
     # pdb.set_trace()
-    nofeats = (file_features == -1).sum()
-    if nofeats or force_nofeats: 
-        features = np.eye(len(vertices), dtype=np.float32)
-    else:
-        features = features[...,None]
-        features = np.hstack((1-features,features))
-        featplot = np.ones((row*col)) * -0.1
-        featplot[vertices] = features[:,1]
-        featplot =featplot.reshape(row,col)
+    grid2obs = dict(zip(vertices,range(len(vertices))))
+    featplot=None
 
 
+    features = np.eye(len(vertices), dtype=np.float32)
 
-    if force_feats:  # This doesn't work right now
-        
-        # features = np.hstack( (np.random.uniform(0.5,.8,size=(size,1)),
-        #                         np.random.uniform(0.2,0.5,size=(size,1))) )
-        for r in range(row):
-            features[row*r+5:row*(r+1),:] = np.roll(features[row*r+5:row*(r+1),:],1,axis=1)
-        
-        featplot=features[:,1]
-        features = preprocess_features(features)
-        features = features[vertices]
 
 
     # pdb.set_trace()    
                
-    file_other_sinks = []
-    source,sink = get_source_sink(source,sink,features,vertices,graph_dict)
+    source,sink = get_source_sink(source,sink,features,vertices,grid2obs)
     labels=np.zeros((len(vertices)))
     labels[sink] = 1
 
-    if len(np.argwhere(file_features != 0.)):
-        # pdb.set_trace()
-        file_other_sinks = np.argwhere(file_features != 0.)[:]
-        labels[file_other_sinks] =1
-        if len(file_other_sinks) > 1:
-            file_other_sinks = list(file_other_sinks.squeeze())
-        else:
-            file_other_sinks_list = []
-            file_other_sinks_list.append(file_other_sinks[0][0])
-            file_other_sinks = file_other_sinks_list
 
+    other_sinks=[]
 
-    if other_sinks:
-        # pdb.set_trace()
-        other_sinks = map(graph_dict.get,other_sinks)
-        labels[other_sinks] =1
-        other_sinks += file_other_sinks
-    else:
-        other_sinks = file_other_sinks
-
-    if other_sources:
-        other_sources = map(graph_dict.get,other_sources)
-
-
-    # pdb.set_trace()    
+ 
     labels = encode_onehot(labels)
     features = sparse_to_tuple(sp.lil_matrix(features))
 
@@ -85,19 +45,19 @@ def load_other(other_sources, other_sinks, path="gcn/data/",append='fourroom',fo
 
     
     graphsize = reduce(lambda x,y: x*y,edges.shape)
-    edges = np.array( map(graph_dict.get,edges.reshape(graphsize,))).reshape(edges.shape)
+    edges = np.array( map(grid2obs.get,edges.reshape(graphsize,))).reshape(edges.shape)
 
 
 
     adj = sp.coo_matrix((np.ones(len(edges)), (edges[:, 0], edges[:, 1])), shape=(len(vertices), len(vertices)), dtype=np.float32)
     adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj) # build symmetric adjacency matrix
 
-    graph_dict  = {v: k for k,v in graph_dict.iteritems()}
+    obs2grid  = {v: k for k,v in grid2obs.iteritems()}
     # pdb.set_trace()
-    return features, featplot, adj, labels, vertices, edges, row, col, source, sink, other_sources, other_sinks, graph_dict
+    return features, adj, labels, vertices, edges, row, col, source, sink , other_sinks, obs2grid, grid2obs
 
 
-def get_source_sink(source,sink,feats,vertices,graph_dict):
+def get_source_sink(source,sink,feats,vertices,grid2obs):
     if source == -1 or sink == -1:
         if feats.shape == np.eye(feats.shape[0]).shape and (feats == np.eye(feats.shape[0])).all():
             choices = np.random.choice(len(vertices),2,replace=False)
@@ -107,64 +67,44 @@ def get_source_sink(source,sink,feats,vertices,graph_dict):
             source = np.argmin(feats[:,1])
             sink = np.argmax(feats[:,1])         
     else:   
-        source = graph_dict.get(source)
-        sink = graph_dict.get(sink)
+        source = grid2obs.get(source)
+        sink = grid2obs.get(sink)
 
     return source, sink
 
-def get_splits(y,source,sink,other_sources,other_sinks):
-    # pdb.set_trace()
+def get_splits(y,source,sink,reward_states,other_sinks=[]):
+    
     idx_train = [source,sink]
-    # other_sinks = other_sinks[-2:]
+    idx_val = range(len(y)) # those validation values are never used by RL
     if len(other_sinks):
         idx_train += other_sinks
-    if len(other_sources):
-        idx_train += other_sources
-    # pdb.set_trace()
-    print([source] + other_sources)
-    print([sink] + other_sinks)
+    print("sources", [source])
+    print("sinks", [sink] + other_sinks)
 
 
 
     
-    idx_val = range(len(y)) # those validation values are never used by RL
 
-    y_train = np.zeros(y.shape, dtype=np.int32)
+    y_train = np.zeros(y.shape, dtype=np.float32)
     y_val = np.zeros(y.shape, dtype=np.int32)
 
-    
 
-    # pdb.set_trace()
     y_train[idx_train] = y[idx_train]
-
-
-    my_train = np.zeros(len(y), dtype=np.float32)
-    my_train[source] = -.12
-    my_train[sink] = 1.
-    my_idx= 0
-    my_val=0.5
-    y_train[my_idx] = [1-my_val, my_val]
-    idx_train.append(my_idx)
-    my_train[my_idx] = my_val
-
-
     y_val[idx_val] = y[idx_val]
 
+    
+    y_train[reward_states] = y[reward_states] #Adding rewarding states to dataset
+    idx_train += reward_states
+
+    
     train_mask = sample_mask(idx_train, y.shape[0])
     val_mask = sample_mask(idx_val, y.shape[0])
 
-    return y_train, y_val, train_mask, val_mask, my_train
+    return y_train, y_val, train_mask, val_mask
 
 
 def preprocess_adj(adj):
     """Preprocessing of adjacency matrix for simple GCN model and conversion to tuple representation."""
-    # pdb.set_trace()
-    # val=10
-    # for i in range(5):
-    #     adj[739-i,740-i] =val
-    # adj[739,740] = val
-    # adj[779,780] = val
-    # adj = np.triu(adj.toarray(),k=1) + np.triu(adj.toarray(),k=1).T
     adj = sp.csr_matrix(adj)
     adj_normalized = normalize_adj(adj + sp.eye(adj.shape[0]))
     adj_normalized= adj + sp.eye(adj.shape[0])
