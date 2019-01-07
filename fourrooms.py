@@ -14,7 +14,7 @@ wsssssw     w
 wsssssw     w
 ww wwww     w
 w     www www
-w    nw     w
+w    rw     w
 w     w     w
 w        g  w
 w     w     w
@@ -177,7 +177,8 @@ wwwwwwwwwwwww
         goal =np.array([list(map(lambda c: 1 if c=='g' else 0, line)) for line in layout.splitlines()]).flatten()
 
         
-        reward_labels = {'r':0.5,'n':-1.}
+        # self.reward_labels = reward_labels = {'r':0.5,'n':-1.,'k':0.1}
+        self.reward_labels = reward_labels = {'r':0.5,'n':-1.}
         more_rewards_states=[]
         more_rewards_labels=[]
         for line in layout.splitlines():
@@ -185,7 +186,6 @@ wwwwwwwwwwwww
             for c in line:
                 if c in reward_labels.keys():
                     more_rewards_labels += c
-
 
 
 
@@ -218,6 +218,12 @@ wwwwwwwwwwwww
 
     def reset(self):
 
+        # reset the possession of the key
+        if 'k' in self.reward_labels:
+            self.key = 0 # Only set key to 0 if we are playing with a key
+        else:
+            self.key = 1
+
         # reset the rewards
         for key in self.more_rewards.keys():
             self.more_rewards[key] = self.original_rewards[key]
@@ -241,14 +247,18 @@ wwwwwwwwwwwww
             self.currentcell = nextcell
 
         state = self.tostate[self.currentcell]
-        done = state == self.goal
+        done = False
 
         reward=0.
-        if state == self.goal:
+        if state == self.goal and self.key:
             reward = 1.
+            done = state == self.goal
         elif state in self.more_rewards_states:
             reward = self.more_rewards.get(state)
+            if reward == 0.1:
+                self.key=1
             self.more_rewards[state] = 0.  # You can only catch the reward once per episode
+
 
 
         state = self.obs2grid.get(state)

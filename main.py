@@ -230,7 +230,8 @@ for seed in seeds:
             path = np.ones((row*col))*0.25
             path[env.possible_states] = 0.      
             path[list(epoch_states)] = .5
-            path[list(reward_states)] = .6    
+            path[list(map(env.obs2grid.get,env.more_rewards_states))] = .6   
+            path[env.obs2grid.get(env.goal)] = .7 
             path=path.reshape(row,col)
 
 
